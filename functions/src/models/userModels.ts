@@ -44,18 +44,11 @@ const userSchema: Schema<IUser> = new mongoose.Schema(
       type: String,
       required: [true, "Please enter your password"],
       minLength: [8, "Password should be greater than 8 characters"],
-      select: false, // Do not return password field by default
+      select: false,
     },
-  phone: {
-  type: String,
-  // validate: {
-  //   validator: function (v: string) {
-  //     return /^\+\d{1,3}\d{4,14}(?:x.+)?$/.test(v);
-  //   },
-  //   message: (props) => `${props.value} is not a valid phone number!`,
-  // },
-},
-
+    phone: {
+      type: String,
+    },
     dateOfBirth: {
       type: Date,
       validate: {
@@ -69,60 +62,68 @@ const userSchema: Schema<IUser> = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    verificationCode: {
-      type: Number,
-    },
-    verificationCodeExpire: {
-      type: Date,
-    },
-    resetPasswordToken: {
-      type: String,
-    },
-    resetPasswordExpire: {
-      type: Date,
-    },
+    verificationCode: Number,
+    verificationCodeExpire: Date,
+    resetPasswordToken: String,
+    resetPasswordExpire: Date,
   },
   {
     timestamps: true,
   }
 );
 
-
+// Hash password before saving
 userSchema.pre<IUser>("save", async function (next) {
-  if (!this.isModified("password")) {
-    return next();
-  }
+  if (!this.isModified("password")) return next();
 
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
-    return next();
+    next();
   } catch (error) {
-    return next(error as Error);
+    next(error as Error);
   }
 });
 
-
+// Methods
 userSchema.methods.comparePassword = async function (enteredPassword: string): Promise<boolean> {
+  if (!this.password) return false;
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
 userSchema.methods.generateVerificationCode = function (): number {
-  function generateRandomFiveDigitNumber(): number {
+  const generateRandomFiveDigitNumber = (): number => {
     const firstDigit = Math.floor(Math.random() * 9) + 1;
     const remainingDigits = Math.floor(Math.random() * 10000)
       .toString()
       .padStart(4, "0");
     return parseInt(firstDigit + remainingDigits, 10);
-  }
+  };
 
   const verificationCode = generateRandomFiveDigitNumber();
   this.verificationCode = verificationCode;
-  this.verificationCodeExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
+  this.verificationCodeExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 min
   return verificationCode;
 };
 
+// userSchema.methods.generateToken = function (): string {
+//   const secret = process.env.JWT_SECRET;
+//   const expiresIn = process.env.JWT_EXPIRES_IN || "1h";
+//   if (!secret) {
+//     throw new Error("JWT_SECRET is not defined in environment variables");
+//   }
+//   return jwt.sign(
+//     { id: this._id, email: this.email },
+//     secret,
+//     { expiresIn }
+//   );
+// };
 
+userSchema.methods.generateResetPasswordToken = function (): string {
+  const resetToken = crypto.randomBytes(20).toString("hex");
+  this.resetPasswordToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+  this.resetPasswordExpire = new Date(Date.now() + 15 * 60 * 1000); // 15 min
+  return resetToken;
+};
 
 export const User = mongoose.model<IUser>("User", userSchema);

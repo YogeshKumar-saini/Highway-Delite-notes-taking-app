@@ -47,6 +47,13 @@ app.use('/api/v1/user', userRouter);
 connection();
 
 // Error handling middleware
+// app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+//   console.error(err.stack);
+//   res.status(500).json({
+//     success: false,
+//     message: "Internal Server Error",
+//   });
+// });
 app.use(errorMiddleware);
 
 // Export the app for server setup
