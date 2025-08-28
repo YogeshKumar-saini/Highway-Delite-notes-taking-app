@@ -16,6 +16,11 @@ export interface IUser extends Document {
   resetPasswordExpire?: Date;
   createdAt?: Date;
   updatedAt?: Date;
+
+  comparePassword: (enteredPassword: string) => Promise<boolean>;
+  generateVerificationCode: () => number;
+  generateToken: () => string;
+  generateResetPasswordToken: () => string;
 }
 
 const userSchema: Schema<IUser> = new mongoose.Schema(
@@ -52,31 +57,86 @@ const userSchema: Schema<IUser> = new mongoose.Schema(
     },
     dateOfBirth: {
       type: Date,
+      validate: {
+        validator: function (value: Date) {
+          return value < new Date();
+        },
+        message: "Date of birth must be in the past.",
+      },
     },
     accountVerified: {
       type: Boolean,
       default: false,
     },
-    verificationCode: Number,
-    verificationCodeExpire: Date,
-    resetPasswordToken: String,
-    resetPasswordExpire: Date,
+    verificationCode: {
+      type: Number,
+    },
+    verificationCodeExpire: {
+      type: Date,
+    },
+    resetPasswordToken: {
+      type: String,
+    },
+    resetPasswordExpire: {
+      type: Date,
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
-userSchema.pre("save", async function (next) {
+userSchema.pre<IUser>("save", async function (next) {
   if (!this.isModified("password")) {
-    next();
+    return next();
   }
-  this.password = await bcrypt.hash(this.password, 10);
+
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    return next();
+  } catch (error) {
+    return next(error as Error);
+  }
 });
 
-userSchema.methods.comparePassword = async function (enteredPassword: string) {
+userSchema.methods.comparePassword = async function (enteredPassword: string): Promise<boolean> {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
+userSchema.methods.generateVerificationCode = function (): number {
+  function generateRandomFiveDigitNumber(): number {
+    const firstDigit = Math.floor(Math.random() * 9) + 1;
+    const remainingDigits = Math.floor(Math.random() * 10000)
+      .toString()
+      .padStart(4, "0");
+    return parseInt(firstDigit + remainingDigits, 10);
+  }
 
+  const verificationCode = generateRandomFiveDigitNumber();
+  this.verificationCode = verificationCode;
+  this.verificationCodeExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-// ***************  export
+  return verificationCode;
+};
+
+// userSchema.methods.generateToken = function (): string {
+//   return jwt.sign({ id: this._id }, process.env.JWT_SECRET_KEY as string, {
+//     expiresIn: process.env.JWT_EXPIRE as string,
+//   });
+// };
+
+// userSchema.methods.generateResetPasswordToken = function (): string {
+//   const resetToken = crypto.randomBytes(20).toString("hex");
+
+//   this.resetPasswordToken = crypto
+//     .createHash("sha256")
+//     .update(resetToken)
+//     .digest("hex");
+
+//   this.resetPasswordExpire = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+//   return resetToken;
+// };
+
 export const User = mongoose.model<IUser>("User", userSchema);

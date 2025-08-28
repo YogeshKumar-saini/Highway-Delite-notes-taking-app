@@ -27,4 +27,7 @@ validator – Input validation
 
 step 2 server.js setup like port and nodemon
 
-step 3 initialize sequalize as using postsql for creating models
+step 3 i mad src folder in which all folders like models,controllers,database,utils,middleware with their files
+
+step 4 : for database i use neondb and mongodb
+step 5 for otp i use twilio.com website
