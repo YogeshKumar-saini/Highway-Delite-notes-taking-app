@@ -2,15 +2,19 @@ import { Request, Response, NextFunction } from "express";
 import { errorMiddleware } from "../middleware/error";
 import { catchAsyncError } from "../middleware/catchAsyncError";
 import { User } from "../models/userModels";
+import type { IUser } from "../models/userModels";
 import { sendEmail } from "../utils/sendEmail";
 import twilio from "twilio";
 import dotenv from "dotenv";
 import { sendToken } from "../utils/sendToken";
+import { RequestValidationError } from "../utils/equestValidationError"; // Assuming you have a custom error class
+import { InternalServerError } from "../utils/InternalServerError"; // Custom error for internal issues
 dotenv.config();
 const client = twilio(
   process.env.TWILIO_ACCOUNT_SID as string,
   process.env.TWILIO_AUTH_TOKEN as string
 );
+
 export const register = catchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     const { name, email, phone, password, verificationMethod } = req.body;
@@ -139,43 +143,49 @@ function generateEmailTemplate(code: string | number) {
 }
 
 
+  
 
 
-export const verifyOTP = catchAsyncError(async (req, res, next) => {
+export const verifyOTP = catchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
   const { email, otp, phone } = req.body;
 
-  function validatePhoneNumber(phone: string) {
-    const phoneRegex = /^\+923\d{9}$/;
-    return phoneRegex.test(phone);
+  // Input Validation
+  if ((!email && !phone) || !otp) {
+    return next(
+      new RequestValidationError("Email or Phone and OTP are required.", 400)
+    );
   }
 
-  if (!validatePhoneNumber(phone)) {
-    return next(errorMiddleware("Invalid phone number.", req, res, next, 400));
-  }
+  // // Validate phone number format if provided
+  // if (phone) {
+  //   const phoneRegex = /^\+91\d{10}$/;
+  //   if (!phoneRegex.test(phone)) {
+  //     return next(
+  //       new RequestValidationError("Invalid phone number format.", 400)
+  //     );
+  //   }
+  // }
 
   try {
+    // Fetch user entries with matching email or phone and not verified
     const userAllEntries = await User.find({
       $or: [
-        {
-          email,
-          accountVerified: false,
-        },
-        {
-          phone,
-          accountVerified: false,
-        },
+        { email, accountVerified: false },
+        { phone, accountVerified: false },
       ],
     }).sort({ createdAt: -1 });
 
-    if (!userAllEntries) {
-      return next(errorMiddleware("User not found.", req, res, next, 404));
+    // Check if user exists
+    if (!userAllEntries || userAllEntries.length === 0) {
+      return next(
+        new RequestValidationError("User not found or already verified.", 404)
+      );
     }
 
-    let user;
-
+    let user: IUser | undefined;
+    // let user: User | undefined;
     if (userAllEntries.length > 1) {
       user = userAllEntries[0];
-
       await User.deleteMany({
         _id: { $ne: user._id },
         $or: [
@@ -187,31 +197,46 @@ export const verifyOTP = catchAsyncError(async (req, res, next) => {
       user = userAllEntries[0];
     }
 
+    // Validate OTP
+    if (!user.verificationCode) {
+      return next(
+        new RequestValidationError("OTP not found for this user.", 400)
+      );
+    }
+
     if (user.verificationCode !== Number(otp)) {
-      return next(errorMiddleware("Invalid OTP.", req, res, next, 400));
+      return next(
+        new RequestValidationError("Invalid OTP.", 400)
+      );
     }
 
+    // Check OTP expiry
     const currentTime = Date.now();
-
     if (!user.verificationCodeExpire) {
-      return next(errorMiddleware("OTP Expired.", req, res, next, 400));
+      return next(
+        new RequestValidationError("OTP expiration information is missing.", 400)
+      );
     }
-    const verificationCodeExpire = new Date(
-      user.verificationCodeExpire
-    ).getTime();
-    console.log(currentTime);
-    console.log(verificationCodeExpire);
+    const verificationCodeExpire = new Date(user.verificationCodeExpire).getTime();
+
     if (currentTime > verificationCodeExpire) {
-      return next(errorMiddleware("OTP Expired.", req, res, next, 400));
+      return next(
+        new RequestValidationError("OTP has expired.", 400)
+      );
     }
 
+    // Update user account status
     user.accountVerified = true;
     user.verificationCode = undefined;
     user.verificationCodeExpire = undefined;
     await user.save({ validateModifiedOnly: true });
 
+    // Send success response with token
     sendToken(user, 200, "Account Verified.", res);
   } catch (error) {
-    return next(errorMiddleware("Internal Server Error.", req, res, next, 500));
+    console.error("Error verifying OTP:", error);
+    return next(
+      new InternalServerError("An error occurred while verifying the OTP. Please try again.")
+    );
   }
 });
