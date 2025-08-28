@@ -1,0 +1,28 @@
+```
+step 1 make a folder function for backend 
+initialize backend by npm init -y
+
+install nacessary packages 
+
+🛠 Dependencies
+
+express – Web framework
+
+sequelize & pg – PostgreSQL ORM & driver
+
+bcrypt – Password hashing
+
+jsonwebtoken – JWT authentication
+
+passport & passport-google-oauth20 – Google OAuth
+
+nodemailer – Email service
+
+cookie-parser, express-session, cors – Middleware
+
+uuid – Unique identifiers
+
+validator – Input validation
+
+
+step 2 server.js setup like port and nodemon
