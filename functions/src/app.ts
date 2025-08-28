@@ -7,9 +7,10 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import indexRoute from './routes/indexRoute';
 import { connection } from './database/dvconnection';
-import  errorMiddleware from './middleware/errorMiddleware';
+import { errorMiddleware } from "./middleware/error";
 import userRouter from './routes/userRoutes';
-// **************** Load environment variables ****************
+
+//********** Load environment variables ****************
 dotenv.config();
 
 // **************** Create Express app ****************
@@ -22,8 +23,14 @@ app.use(express.json());
 app.use(helmet());
 
 //**********  Middleware for CORS ****************
-app.use(cors());
 
+app.use(
+  cors({
+    origin: [process.env.FRONTEND_URL || 'http://localhost:3000'],
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  })
+);
 //**********  Middleware to parse cookies ****************
 app.use(cookieParser());
 
@@ -39,21 +46,7 @@ app.use('/api/v1/user', userRouter);
 // **************** dataBase Connecting ************    
 connection();
 
-// Error handling middleware *********************
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error(err.stack);
-  res.status(500).send('Something broke!');
-});
-
-// Use the routes ************************
-app.use('/', indexRoute);
-
-// Error handling middleware *********************
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error(err.stack);
-  res.status(500).send('Something broke!');
-});
-
+// Error handling middleware
 app.use(errorMiddleware);
 
 // Export the app for server setup

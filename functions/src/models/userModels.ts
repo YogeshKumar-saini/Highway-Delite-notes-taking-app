@@ -46,15 +46,16 @@ const userSchema: Schema<IUser> = new mongoose.Schema(
       minLength: [8, "Password should be greater than 8 characters"],
       select: false, // Do not return password field by default
     },
-    phone: {
-      type: String,
-      validate: {
-        validator: function (v: string) {
-          return /^\d{10}$/.test(v);
-        },
-        message: (props) => `${props.value} is not a valid 10-digit phone number!`,
-      },
-    },
+  phone: {
+  type: String,
+  // validate: {
+  //   validator: function (v: string) {
+  //     return /^\+\d{1,3}\d{4,14}(?:x.+)?$/.test(v);
+  //   },
+  //   message: (props) => `${props.value} is not a valid phone number!`,
+  // },
+},
+
     dateOfBirth: {
       type: Date,
       validate: {
@@ -86,6 +87,7 @@ const userSchema: Schema<IUser> = new mongoose.Schema(
   }
 );
 
+
 userSchema.pre<IUser>("save", async function (next) {
   if (!this.isModified("password")) {
     return next();
@@ -99,6 +101,7 @@ userSchema.pre<IUser>("save", async function (next) {
     return next(error as Error);
   }
 });
+
 
 userSchema.methods.comparePassword = async function (enteredPassword: string): Promise<boolean> {
   return await bcrypt.compare(enteredPassword, this.password);
@@ -120,23 +123,6 @@ userSchema.methods.generateVerificationCode = function (): number {
   return verificationCode;
 };
 
-// userSchema.methods.generateToken = function (): string {
-//   return jwt.sign({ id: this._id }, process.env.JWT_SECRET_KEY as string, {
-//     expiresIn: process.env.JWT_EXPIRE as string,
-//   });
-// };
 
-// userSchema.methods.generateResetPasswordToken = function (): string {
-//   const resetToken = crypto.randomBytes(20).toString("hex");
-
-//   this.resetPasswordToken = crypto
-//     .createHash("sha256")
-//     .update(resetToken)
-//     .digest("hex");
-
-//   this.resetPasswordExpire = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
-
-//   return resetToken;
-// };
 
 export const User = mongoose.model<IUser>("User", userSchema);

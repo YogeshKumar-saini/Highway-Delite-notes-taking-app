@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { ErrorHandler } from "../utils/errorHandler";
+import { errorMiddleware } from "../middleware/error";
 import { catchAsyncError } from "../middleware/catchAsyncError";
 import { User } from "../models/userModels";
 import {sendEmail} from "../utils/sendEmail";
@@ -13,15 +13,15 @@ export const register = catchAsyncError(async (req: Request, res: Response, next
 
     // Validate required fields
     if (!name || !email || !phone || !password || !verificationMethod) {
-      return next(new ErrorHandler("All fields are required.", 400));
+      return next(new Error("All fields are required."));
     }
 
     // Validate phone number
-    const phoneRegex = /^\+91\d{10}$/; // Adjust regex based on your requirements
-    if (!phoneRegex.test(phone)) {
-      return next(new ErrorHandler("Invalid phone number.", 400));
-    }
-
+    // Validate phone number
+    // // const phoneRegex = /^\+\d{1,3}[-.\s]?\d{4,14}$/; // Updated regex
+    // if (!phoneRegex.test(phone)) {
+    //   return next(new errorMiddleware("Invalid phone number.", 400));
+    // }
     // Check if the email or phone is already in use by an account that has been verified
     const existingUser = await User.findOne({
       $or: [
@@ -31,7 +31,7 @@ export const register = catchAsyncError(async (req: Request, res: Response, next
     });
 
     if (existingUser) {
-      return next(new ErrorHandler("Phone or Email is already used.", 400));
+      return next(errorMiddleware("Phone or Email is already used.", req, res, next));
     }
 
     // Check for previous registration attempts that are not verified
@@ -44,11 +44,19 @@ export const register = catchAsyncError(async (req: Request, res: Response, next
 
     if (registrationAttempts.length > 3) {
       return next(
-        new ErrorHandler(
+        errorMiddleware(
           "You have exceeded the maximum number of registration attempts (3). Please try again after an hour.",
-          400
+          req,
+          res,
+          next
         )
       );
+    }
+
+    // Validate verification method
+    const validVerificationMethods = ["email", "phone"];
+    if (!validVerificationMethods.includes(verificationMethod)) {
+      return next(errorMiddleware("Invalid verification method. Supported methods are 'email' and 'phone'.", req, res, next));
     }
 
     // Create user data
@@ -86,7 +94,6 @@ export const register = catchAsyncError(async (req: Request, res: Response, next
     next(error);
   }
 });
-
 
 
 async function sendVerificationCode(
@@ -138,7 +145,7 @@ function generateEmailTemplate(verificationCode: string | number) {
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9;">
       <h2 style="color: #4CAF50; text-align: center;">Verification Code</h2>
-      <p style="font-size: 16px; color: #333;">Dear ${name},</p>
+      <p style="font-size: 16px; color: #333;">Dear Sir,</p>
       <p style="font-size: 16px; color: #333;">Your verification code is:</p>
       <div style="text-align: center; margin: 20px 0;">
         <span style="display: inline-block; font-size: 24px; font-weight: bold; color: #4CAF50; padding: 10px 20px; border: 1px solid #4CAF50; border-radius: 5px; background-color: #e8f5e9;">
@@ -154,4 +161,5 @@ function generateEmailTemplate(verificationCode: string | number) {
     </div>
   `;
 }
+
 
