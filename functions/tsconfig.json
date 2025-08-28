@@ -6,8 +6,9 @@
     "rootDir": ".",
     "strict": true,
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "allowJs": true
   },
-  "include": ["./**/*.ts"],
+  "include": ["./**/*.ts", "models/index.ts"],
   "exclude": ["node_modules"]
 }
