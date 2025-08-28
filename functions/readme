@@ -26,3 +26,5 @@ validator – Input validation
 
 
 step 2 server.js setup like port and nodemon
+
+step 3 initialize sequalize as using postsql for creating models
