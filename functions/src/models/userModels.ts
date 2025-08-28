@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema } from "mongoose";
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
+import jwt, { SignOptions, Secret } from "jsonwebtoken";
 import crypto from "crypto";
 
 export interface IUser extends Document {
@@ -106,18 +106,25 @@ userSchema.methods.generateVerificationCode = function (): number {
   return verificationCode;
 };
 
-// userSchema.methods.generateToken = function (): string {
-//   const secret = process.env.JWT_SECRET;
-//   const expiresIn = process.env.JWT_EXPIRES_IN || "1h";
-//   if (!secret) {
-//     throw new Error("JWT_SECRET is not defined in environment variables");
-//   }
-//   return jwt.sign(
-//     { id: this._id, email: this.email },
-//     secret,
-//     { expiresIn }
-//   );
-// };
+userSchema.methods.generateToken = function (): string {
+  const secret: Secret | undefined = process.env.JWT_SECRET;
+  const expiresIn = ((process.env.JWT_EXPIRES_IN as string | undefined) || "1h") as SignOptions['expiresIn'];
+
+  if (!secret) {
+    throw new Error("JWT_SECRET is not defined in environment variables");
+  }
+
+  const signOptions: SignOptions = { expiresIn };
+
+  // Payload can include any user data you need
+  const payload = {
+    id: this._id,
+    email: this.email,
+  };
+
+  return jwt.sign(payload, secret, signOptions);
+};
+
 
 userSchema.methods.generateResetPasswordToken = function (): string {
   const resetToken = crypto.randomBytes(20).toString("hex");

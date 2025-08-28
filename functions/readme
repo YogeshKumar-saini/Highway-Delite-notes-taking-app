@@ -31,3 +31,7 @@ step 3 i mad src folder in which all folders like models,controllers,database,ut
 
 step 4 : for database i use neondb and mongodb
 step 5 for otp i use twilio.com website
+step 6 : for email i use nodemailer
+step 7 : for authentication i use jwt 
+step 8 : phone number and email otp testing done and work perfectly
+

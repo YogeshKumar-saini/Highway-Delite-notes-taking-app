@@ -5,6 +5,7 @@ import { User } from "../models/userModels";
 import { sendEmail } from "../utils/sendEmail";
 import twilio from "twilio";
 import dotenv from "dotenv";
+import { sendToken } from "../utils/sendToken";
 dotenv.config();
 const client = twilio(
   process.env.TWILIO_ACCOUNT_SID as string,
@@ -136,3 +137,81 @@ function generateEmailTemplate(code: string | number) {
     </div>
   `;
 }
+
+
+
+
+export const verifyOTP = catchAsyncError(async (req, res, next) => {
+  const { email, otp, phone } = req.body;
+
+  function validatePhoneNumber(phone: string) {
+    const phoneRegex = /^\+923\d{9}$/;
+    return phoneRegex.test(phone);
+  }
+
+  if (!validatePhoneNumber(phone)) {
+    return next(errorMiddleware("Invalid phone number.", req, res, next, 400));
+  }
+
+  try {
+    const userAllEntries = await User.find({
+      $or: [
+        {
+          email,
+          accountVerified: false,
+        },
+        {
+          phone,
+          accountVerified: false,
+        },
+      ],
+    }).sort({ createdAt: -1 });
+
+    if (!userAllEntries) {
+      return next(errorMiddleware("User not found.", req, res, next, 404));
+    }
+
+    let user;
+
+    if (userAllEntries.length > 1) {
+      user = userAllEntries[0];
+
+      await User.deleteMany({
+        _id: { $ne: user._id },
+        $or: [
+          { phone, accountVerified: false },
+          { email, accountVerified: false },
+        ],
+      });
+    } else {
+      user = userAllEntries[0];
+    }
+
+    if (user.verificationCode !== Number(otp)) {
+      return next(errorMiddleware("Invalid OTP.", req, res, next, 400));
+    }
+
+    const currentTime = Date.now();
+
+    if (!user.verificationCodeExpire) {
+      return next(errorMiddleware("OTP Expired.", req, res, next, 400));
+    }
+    const verificationCodeExpire = new Date(
+      user.verificationCodeExpire
+    ).getTime();
+    console.log(currentTime);
+    console.log(verificationCodeExpire);
+    if (currentTime > verificationCodeExpire) {
+      return next(errorMiddleware("OTP Expired.", req, res, next, 400));
+    }
+
+    user.accountVerified = true;
+    user.verificationCode = undefined;
+    user.verificationCodeExpire = undefined;
+    await user.save({ validateModifiedOnly: true });
+
+    sendToken(user, 200, "Account Verified.", res);
+  } catch (error) {
+    return next(errorMiddleware("Internal Server Error.", req, res, next, 500));
+  }
+});
