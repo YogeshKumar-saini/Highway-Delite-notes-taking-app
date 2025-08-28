@@ -7,6 +7,7 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import indexRoute from './routes/indexRoute';
 import { connection } from './database/dvconnection';
+import  errorMiddleware from './middleware/errorMiddleware';
 
 // **************** Load environment variables ****************
 dotenv.config();
@@ -49,6 +50,8 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error(err.stack);
   res.status(500).send('Something broke!');
 });
+
+app.use(errorMiddleware);
 
 // Export the app for server setup
 export default app;
