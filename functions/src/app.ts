@@ -8,7 +8,7 @@ import dotenv from 'dotenv';
 import indexRoute from './routes/indexRoute';
 import { connection } from './database/dvconnection';
 import  errorMiddleware from './middleware/errorMiddleware';
-
+import userRouter from './routes/userRoutes';
 // **************** Load environment variables ****************
 dotenv.config();
 
@@ -32,6 +32,9 @@ app.use(compression());
 
 //**********  Middleware for logging ****************
 app.use(morgan('combined'));
+
+// **************** User Routes ****************
+app.use('/api/v1/user', userRouter);
 
 // **************** dataBase Connecting ************    
 connection();
