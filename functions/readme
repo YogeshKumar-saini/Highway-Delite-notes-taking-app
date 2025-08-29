@@ -35,5 +35,7 @@ step 6 : for email i use nodemailer
 step 7 : for authentication i use jwt 
 step 8 : phone number and email otp testing done and work perfectly
 
- all routes of user loje signup ,login ,verify-auth, logout testing successfully 
- 
+ all routes of user loje signup ,login ,verify-auth, logout,forgot password,update password testing successfully 
+
+
+ automation function make for delete unverify accounts when user continuously loginn many time and error that you login after 1 hour 

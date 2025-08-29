@@ -9,20 +9,21 @@ import indexRoute from './routes/indexRoute';
 import { connection } from './database/dvconnection';
 import { errorMiddleware } from "./middleware/error";
 import userRouter from './routes/userRoutes';
+import { removeUnverifiedAccounts } from './automation/removeunverifyaccount';
 
-// **************** Load environment variables ****************
+//  Load environment variables
 dotenv.config();
 
-// **************** Create Express app ****************
+// Create Express app
 const app = express();
 
-// **************** Middleware to parse JSON ****************
+// Middleware to parse JSON
 app.use(express.json());
 
-// **************** Middleware for security ****************
+// Middleware for security
 app.use(helmet());
 
-// **************** Middleware for CORS ****************
+// Middleware for CORS
 app.use(
   cors({
     origin: [process.env.FRONTEND_URL || 'http://localhost:3000'],
@@ -31,36 +32,33 @@ app.use(
   })
 );
 
-// **************** Middleware to parse cookies ****************
+// Middleware to parse cookies
 app.use(cookieParser());
 
-// **************** Middleware for compression ****************
+// Middleware for compression
 app.use(compression());
 
-// **************** Middleware for logging ****************
+// Middleware for logging
 app.use(morgan('combined'));
 
-// **************** User Routes ****************
+// User Routes
 app.use('/api/v1/user', userRouter);
 
-// **************** Root Route ****************
+// Root Route
 app.use('/', indexRoute);
 
-// **************** Error Handling Middleware ****************
-// It's important to define error handling middleware after all routes
+// Error Handling Middleware
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error(err.stack); // Log the error for debugging
-
-  // Send a generic error message to the client
+  console.error(err.stack); 
   res.status(500).json({
     success: false,
     message: "Internal Server Error",
   });
 });
 
-// **************** Database Connection ****************
-// It's generally better to connect to the database after setting up middleware and routes
+removeUnverifiedAccounts();
+// Database Connection
 connection();
 
-// **************** Export the app for server setup ****************
+// Export the app for server setup
 export default app;
