@@ -8,7 +8,7 @@ declare global {
     }
   }
 }
-import { errorMiddleware } from "../middleware/error";
+import ErrorHandler, { errorMiddleware } from "../middleware/error";
 import { catchAsyncError } from "../middleware/catchAsyncError";
 import { User } from "../models/userModels";
 import type { IUser } from "../models/userModels";
@@ -265,7 +265,6 @@ export const verifyOTP = catchAsyncError(async (req: Request, res: Response, nex
   }
 });
 
-
 // ******************************** login **************************
 export const login = catchAsyncError(async (req, res, next) => {
   const { email, password } = req.body;
@@ -299,7 +298,6 @@ export const logout = catchAsyncError(async (req, res, next) => {
     });
 });
 
-
 // ******************************** getUser ***************************
 export const getUser = catchAsyncError(async (req, res, next) => {
   const user = req.user;
@@ -309,3 +307,44 @@ export const getUser = catchAsyncError(async (req, res, next) => {
   });
 });
 
+// Forgot Password
+export const forgotPassword = catchAsyncError(async (req, res, next) => {
+  const user = await User.findOne({
+    email: req.body.email,
+    accountVerified: true,
+  });
+  if (!user) {
+    return next(new ErrorHandler("User not found.", 404));
+  }
+  const resetToken = user.generateResetPasswordToken();
+  await user.save({ validateBeforeSave: false });
+  const resetPasswordUrl = `${process.env.FRONTEND_URL}/password/reset/${resetToken}`;
+
+  const message = `Your Reset Password Token is:- \n\n ${resetPasswordUrl} \n\n If you have not requested this email then please ignore it.`;
+
+  try {
+    sendEmail({
+      email: user.email,
+      subject: "MERN AUTHENTICATION APP RESET PASSWORD for notes app",
+      message,
+    });
+    res.status(200).json({
+      success: true,
+      message: `Email sent to ${user.email} successfully.`,
+    });
+  } catch (error) {
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save({ validateBeforeSave: false });
+    let errorMessage = "Cannot send reset password token.";
+    if (error && typeof error === "object" && "message" in error) {
+      errorMessage = (error as { message?: string }).message || errorMessage;
+    }
+    return next(
+      new ErrorHandler(
+        errorMessage,
+        500
+      )
+    );
+  }
+});
