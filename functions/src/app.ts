@@ -7,10 +7,10 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import indexRoute from './routes/indexRoute';
 import { connection } from './database/dvconnection';
-import { errorMiddleware } from "./middleware/error";
 import userRouter from './routes/userRoutes';
 import { removeUnverifiedAccounts } from './automation/removeunverifyaccount';
-
+import noteRoutes from "./routes/noteRoutes";
+import {errorMiddleware} from "./middleware/error";
 //  Load environment variables
 dotenv.config();
 
@@ -43,6 +43,8 @@ app.use(morgan('combined'));
 
 // User Routes
 app.use('/api/v1/user', userRouter);
+// Note Routes
+app.use('/api/v1', noteRoutes);
 
 // Root Route
 app.use('/', indexRoute);
@@ -55,7 +57,7 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     message: "Internal Server Error",
   });
 });
-
+app.use(errorMiddleware);
 removeUnverifiedAccounts();
 // Database Connection
 connection();
