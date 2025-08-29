@@ -2,6 +2,7 @@ import mongoose, { Document, Schema } from "mongoose";
 import bcrypt from "bcrypt";
 import jwt, { SignOptions, Secret } from "jsonwebtoken";
 import crypto from "crypto";
+import { log } from "console";
 
 export interface IUser extends Document {
   name: string;
@@ -16,6 +17,7 @@ export interface IUser extends Document {
   resetPasswordExpire?: Date;
   createdAt?: Date;
   updatedAt?: Date;
+  loginMethod?: 'password' | 'otp';
 
   comparePassword: (enteredPassword: string) => Promise<boolean>;
   generateVerificationCode: () => number;
@@ -42,7 +44,7 @@ const userSchema: Schema<IUser> = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: [true, "Please enter your password"],
+      required: [false, "password is optional"],
       minLength: [8, "Password should be greater than 8 characters"],
       select: false,
     },
@@ -66,6 +68,11 @@ const userSchema: Schema<IUser> = new mongoose.Schema(
     verificationCodeExpire: Date,
     resetPasswordToken: String,
     resetPasswordExpire: Date,
+    loginMethod: {
+      type: String,
+      enum: ['password', 'otp'],
+      default: 'password',
+    },
   },
   {
     timestamps: true,
@@ -120,6 +127,7 @@ userSchema.methods.generateToken = function (): string {
   const payload = {
     id: this._id,
     email: this.email,
+    loginMethod: this.loginMethod,
   };
 
   return jwt.sign(payload, secret, signOptions);

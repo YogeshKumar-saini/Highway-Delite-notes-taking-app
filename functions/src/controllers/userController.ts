@@ -125,28 +125,38 @@ export const register = catchAsyncError(
     }
   }
 );
+
 // *************************** sendVerificationCode ***************************
 async function sendVerificationCode(
   verificationMethod: string,
   verificationCode: string | number,
+  
   name: string,
   email: string,
   phone: string
 ) {
+  console.log("sendVerificationCode - verificationMethod:", verificationMethod);
+  console.log("sendVerificationCode - email:", email);
+  console.log("sendVerificationCode - phone:", phone);
   if (verificationMethod === "email") {
     const message = generateEmailTemplate(verificationCode);
     await sendEmail({ email, subject: "Your Verification Code", message });
+    return "OTP sent via email.";
   } else if (verificationMethod === "phone") {
     const verificationCodeWithSpace = verificationCode.toString().split("").join(" ");
-    await client.calls.create({
-      twiml: `<Response><Say>Your verification code is ${verificationCodeWithSpace}</Say></Response>`,
+    await client.messages.create({
+      body: `Your verification code is ${verificationCodeWithSpace}`,
       from: process.env.TWILIO_PHONE_NUMBER as string,
       to: phone,
     });
+    return "OTP sent via SMS.";
+
+
   } else {
     throw new Error("Invalid verification method");
   }
 }
+
 
 // *************************** generateEmailTemplate ***************************
 function generateEmailTemplate(code: string | number) {
@@ -169,6 +179,62 @@ function generateEmailTemplate(code: string | number) {
     </div>
   `;
 }
+
+// ******************************** requestOTP ***************************
+// ******************************** requestOTP ***************************
+export const requestOTP = catchAsyncError(async (req, res, next) => {
+  const { email, phone, loginMethod } = req.body;
+
+  if (!loginMethod) {
+    return next(errorMiddleware("Login method is required.", req, res, next, 400));
+  }
+
+  let user;
+  try {
+    if (loginMethod === "otp") {
+      if (!email && !phone) {
+        return next(errorMiddleware("Email or phone number is required for OTP login.", req, res, next, 400));
+      }
+
+      // Fetch user by email or phone
+      user = await User.findOne({ $or: [{ email }, { phone }], accountVerified: true });
+      if (!user) {
+        return next(errorMiddleware("User not found or account not verified.", req, res, next, 404));
+      }
+
+      // Determine the verification method
+      const verificationMethod = user.email ? "email" : (user.phone ? "phone" : "invalid");
+
+      if (verificationMethod === "invalid") {
+        return next(errorMiddleware("User has no email or phone number registered.", req, res, next, 400));
+      }
+
+      // Generate OTP
+      const otp = user.generateVerificationCode();
+      await user.save({ validateModifiedOnly: true });
+
+      // Send OTP via chosen method
+      const message = await sendVerificationCode(
+        verificationMethod,
+        otp,
+        user.name as string,
+        user.email as string,
+        user.phone as string
+      );
+
+      res.status(200).json({
+        success: true,
+        message: `OTP sent successfully via ${verificationMethod}.`,
+      });
+    } else {
+      return next(errorMiddleware("Invalid login method for OTP request.", req, res, next, 400));
+    }
+  } catch (error) {
+    console.error("Error requesting OTP:", error);
+    return next(new InternalServerError("An error occurred while requesting OTP."));
+  }
+});
+
 
 // ******************************** verifyOTP ***************************
 export const verifyOTP = catchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
@@ -242,6 +308,9 @@ export const verifyOTP = catchAsyncError(async (req: Request, res: Response, nex
         new RequestValidationError("OTP expiration information is missing.", 400)
       );
     }
+    if (!user.verificationCodeExpire) {
+      return next(errorMiddleware("OTP expiration information is missing.", req, res, next, 400));
+    }
     const verificationCodeExpire = new Date(user.verificationCodeExpire).getTime();
 
     if (currentTime > verificationCodeExpire) {
@@ -268,22 +337,71 @@ export const verifyOTP = catchAsyncError(async (req: Request, res: Response, nex
 
 // ******************************** login **************************
 export const login = catchAsyncError(async (req, res, next) => {
-  const { email, password } = req.body;
-  if (!email || !password) {
-    return next(errorMiddleware("Email and password are required.", req, res, next, 400));
+  const { email, password, otp, loginMethod } = req.body;
+
+  if (!email || !loginMethod) {
+    return next(errorMiddleware("Email and login method are required.", req, res, next, 400));
   }
-  const user = await User.findOne({ email, accountVerified: true }).select(
-    "+password"
-  );
-  if (!user) {
-    return next(errorMiddleware("Invalid email or password.", req, res, next, 400));
+
+  let user;
+  try {
+    if (loginMethod === "password") {
+      // Password-based login
+      if (!password) {
+        return next(errorMiddleware("Password is required for password-based login.", req, res, next, 400));
+      }
+      user = await User.findOne({ email, accountVerified: true }).select("+password");
+      if (!user) {
+        return next(errorMiddleware("Invalid email or password.", req, res, next, 400));
+      }
+      const isPasswordMatched = await user.comparePassword(password);
+      if (!isPasswordMatched) {
+        return next(errorMiddleware("Invalid email or password.", req, res, next, 400));
+      }
+    } else if (loginMethod === "otp") {
+      // OTP-based login
+      if (!otp) {
+        return next(errorMiddleware("OTP is required for OTP-based login.", req, res, next, 400));
+      }
+      user = await User.findOne({ email, accountVerified: true });
+      if (!user) {
+        return next(errorMiddleware("Invalid email or OTP.", req, res, next, 400));
+      }
+      if (!user.verificationCode) {
+        return next(errorMiddleware("OTP not found for this user.", req, res, next, 400));
+      }
+      if (user.verificationCode !== Number(otp)) {
+        return next(errorMiddleware("Invalid OTP.", req, res, next, 400));
+      }
+      const currentTime = Date.now();
+      if (!user.verificationCodeExpire) {
+        return next(errorMiddleware("OTP expiration information is missing.", req, res, next, 400));
+      }
+      const verificationCodeExpire = new Date(user.verificationCodeExpire).getTime();
+      if (currentTime > verificationCodeExpire) {
+        return next(errorMiddleware("OTP has expired.", req, res, next, 400));
+      }
+      user.verificationCode = undefined;
+      user.verificationCodeExpire = undefined;
+      await user.save({ validateModifiedOnly: true });
+    } else {
+      return next(errorMiddleware("Invalid login method. Use 'password' or 'otp'.", req, res, next, 400));
+    }
+
+    // Update the login method if tracking is enabled
+    if (user.loginMethod !== loginMethod) {
+      user.loginMethod = loginMethod;
+      await user.save({ validateModifiedOnly: true });
+    }
+
+    // Generate and send token
+    sendToken(user, 200, "User logged in successfully.", res);
+  } catch (error) {
+    console.error("Error during login:", error);
+    return next(new InternalServerError("An error occurred during login. Please try again."));
   }
-  const isPasswordMatched = await user.comparePassword(password);
-  if (!isPasswordMatched) {
-    return next(errorMiddleware("Invalid email or password.", req, res, next, 400));
-  }
-  sendToken(user, 200, "User logged in successfully.", res);
 });
+
 
 // ******************************** logout **************************
 export const logout = catchAsyncError(async (req, res, next) => {
