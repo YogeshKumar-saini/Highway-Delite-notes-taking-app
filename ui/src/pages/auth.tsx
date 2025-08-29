@@ -1,9 +1,8 @@
 import  { useContext, useState } from "react";
-import "../styles/Auth.css";
 import { Navigate } from "react-router-dom";
 import { Context } from "@/components/context";
-import Login from "@/components/Login";
-import Register from "@/components/Register";
+import Login from "@/pages/Login";
+import Register from "@/pages/Register";
 
 
 const Auth = () => {
