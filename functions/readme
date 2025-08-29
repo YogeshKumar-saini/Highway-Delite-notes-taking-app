@@ -42,3 +42,6 @@ step 8 : phone number and email otp testing done and work perfectly
 
 
 i added a functionality in login that your have choise either he can login through password or otp based
+
+
+notes model and its crud functionality is implemented 
