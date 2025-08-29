@@ -1,4 +1,13 @@
 import { Request, Response, NextFunction } from "express";
+
+// Extend Express Request interface to include 'user'
+declare global {
+  namespace Express {
+    interface Request {
+      user?: any; // Replace 'any' with your IUser type if available
+    }
+  }
+}
 import { errorMiddleware } from "../middleware/error";
 import { catchAsyncError } from "../middleware/catchAsyncError";
 import { User } from "../models/userModels";
@@ -15,14 +24,32 @@ const client = twilio(
   process.env.TWILIO_AUTH_TOKEN as string
 );
 
+
 export const register = catchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
-    const { name, email, phone, password, verificationMethod } = req.body;
+    const { name, email, phone, password, verificationMethod, dateOfBirth } = req.body;
 
     try {
       // Validate required fields
-      if (!name || !email || !phone || !password || !verificationMethod) {
+      if (!name || !email || !phone || !password || !verificationMethod || !dateOfBirth) {
         return next(errorMiddleware("All fields are required.", req, res, next, 400));
+      }
+
+      // Validate dateOfBirth format
+      const birthDate = new Date(dateOfBirth);
+      if (isNaN(birthDate.getTime())) {
+        return next(errorMiddleware("Invalid date of birth format.", req, res, next, 400));
+      }
+
+      // Optional: Check if the user is at least 13 years old
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      if (age < 13) {
+        return next(errorMiddleware("You must be at least 13 years old to register.", req, res, next, 400));
       }
 
       // Check if the email or phone is already verified
@@ -74,7 +101,7 @@ export const register = catchAsyncError(
       }
 
       // Create user and generate verification code
-      const user = await User.create({ name, email, phone, password });
+      const user = await User.create({ name, email, phone, password, dateOfBirth });
       const verificationCode = await user.generateVerificationCode();
       await user.save();
 
@@ -239,4 +266,48 @@ export const verifyOTP = catchAsyncError(async (req: Request, res: Response, nex
       new InternalServerError("An error occurred while verifying the OTP. Please try again.")
     );
   }
+});
+
+
+
+// ********************************
+
+export const login = catchAsyncError(async (req, res, next) => {
+  const { email, password } = req.body;
+  console.log("Email:", email);
+  if (!email || !password) {
+    return next(errorMiddleware("Email and password are required.", req, res, next, 400));
+  }
+  const user = await User.findOne({ email, accountVerified: true }).select(
+    "+password"
+  );
+  if (!user) {
+    return next(errorMiddleware("Invalid email or password.", req, res, next, 400));
+  }
+  const isPasswordMatched = await user.comparePassword(password);
+  if (!isPasswordMatched) {
+    return next(errorMiddleware("Invalid email or password.", req, res, next, 400));
+  }
+  sendToken(user, 200, "User logged in successfully.", res);
+});
+
+export const logout = catchAsyncError(async (req, res, next) => {
+  res 
+    .status(200)
+    .cookie("token", "", {
+      expires: new Date(Date.now()),
+      httpOnly: true,
+    })
+    .json({
+      success: true,
+      message: "Logged out successfully.",
+    });
+});
+
+export const getUser = catchAsyncError(async (req, res, next) => {
+  const user = req.user;
+  res.status(200).json({
+    success: true,
+    user,
+  });
 });
