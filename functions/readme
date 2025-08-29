@@ -39,3 +39,6 @@ step 8 : phone number and email otp testing done and work perfectly
 
 
  automation function make for delete unverify accounts when user continuously loginn many time and error that you login after 1 hour 
+
+
+i added a functionality in login that your have choise either he can login through password or otp based
