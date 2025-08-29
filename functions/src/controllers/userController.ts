@@ -19,6 +19,7 @@ import { sendToken } from "../utils/sendToken";
 import { RequestValidationError } from "../utils/equestValidationError"; // Assuming you have a custom error class
 import { InternalServerError } from "../utils/InternalServerError"; // Custom error for internal issues
 dotenv.config();
+import crypto from "crypto";
 const client = twilio(
   process.env.TWILIO_ACCOUNT_SID as string,
   process.env.TWILIO_AUTH_TOKEN as string
@@ -347,4 +348,39 @@ export const forgotPassword = catchAsyncError(async (req, res, next) => {
       )
     );
   }
+});
+
+
+// Reset Password
+export const resetPassword = catchAsyncError(async (req, res, next) => {
+  const { token } = req.params;
+  const resetPasswordToken = crypto
+    .createHash("sha256")
+    .update(token)
+    .digest("hex");
+  const user = await User.findOne({
+    resetPasswordToken,
+    resetPasswordExpire: { $gt: Date.now() },
+  });
+  if (!user) {
+    return next(
+      new ErrorHandler(
+        "Reset password token is invalid or has been expired.",
+        400
+      )
+    );
+  }
+
+  if (req.body.password !== req.body.confirmPassword) {
+    return next(
+      new ErrorHandler("Password & confirm password do not match.", 400)
+    );
+  }
+
+  user.password = req.body.password;
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpire = undefined;
+  await user.save();
+
+  sendToken(user, 200, "Reset Password Successfully.", res);
 });
