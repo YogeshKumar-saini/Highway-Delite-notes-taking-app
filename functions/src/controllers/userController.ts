@@ -24,7 +24,7 @@ const client = twilio(
   process.env.TWILIO_AUTH_TOKEN as string
 );
 
-
+// *************************** register ***************************
 export const register = catchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     const { name, email, phone, password, verificationMethod, dateOfBirth } = req.body;
@@ -124,7 +124,7 @@ export const register = catchAsyncError(
     }
   }
 );
-
+// *************************** sendVerificationCode ***************************
 async function sendVerificationCode(
   verificationMethod: string,
   verificationCode: string | number,
@@ -147,7 +147,7 @@ async function sendVerificationCode(
   }
 }
 
-
+// *************************** generateEmailTemplate ***************************
 function generateEmailTemplate(code: string | number) {
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9;">
@@ -169,10 +169,7 @@ function generateEmailTemplate(code: string | number) {
   `;
 }
 
-
-  
-
-
+// ******************************** verifyOTP ***************************
 export const verifyOTP = catchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
   const { email, otp, phone } = req.body;
 
@@ -269,9 +266,7 @@ export const verifyOTP = catchAsyncError(async (req: Request, res: Response, nex
 });
 
 
-
-// ********************************
-
+// ******************************** login **************************
 export const login = catchAsyncError(async (req, res, next) => {
   const { email, password } = req.body;
   if (!email || !password) {
@@ -290,6 +285,7 @@ export const login = catchAsyncError(async (req, res, next) => {
   sendToken(user, 200, "User logged in successfully.", res);
 });
 
+// ******************************** logout **************************
 export const logout = catchAsyncError(async (req, res, next) => {
   res 
     .status(200)
@@ -303,6 +299,8 @@ export const logout = catchAsyncError(async (req, res, next) => {
     });
 });
 
+
+// ******************************** getUser ***************************
 export const getUser = catchAsyncError(async (req, res, next) => {
   const user = req.user;
   res.status(200).json({
@@ -310,3 +308,4 @@ export const getUser = catchAsyncError(async (req, res, next) => {
     user,
   });
 });
+
