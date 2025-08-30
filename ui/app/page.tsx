@@ -1,9 +1,10 @@
-import React from 'react'
+import { AuthShell } from "@/auth/auth-shell"
+import RegisterForm from "@/components/register-form"
 
-function page() {
+export default function HomePage() {
   return (
-    <div>page</div>
+     <AuthShell title="Sign up" subtitle="Sign up to enjoy the feature of HD">
+       <RegisterForm />
+     </AuthShell>
   )
 }
-
-export default page
