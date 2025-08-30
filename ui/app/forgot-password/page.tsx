@@ -4,7 +4,6 @@ import type React from "react"
 
 import { useState } from "react"
 import { api, ApiError } from "@/lib/api"
-import { Navbar } from "@/components/navbar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -34,7 +33,6 @@ export default function ForgotPasswordPage() {
 
   return (
     <main className="min-h-dvh bg-white">
-      <Navbar showAuthLinks={false} />
       <section className="mx-auto max-w-3xl px-4 py-10">
         <Card className="w-full max-w-md mx-auto">
           <CardHeader>
