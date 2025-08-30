@@ -9,6 +9,6 @@
     "resolveJsonModule": true,
     "skipLibCheck": true
   },
-  "include": ["src"],
+  "include": ["src", "../ui/src/hooks"],
   "exclude": ["node_modules"]
 }

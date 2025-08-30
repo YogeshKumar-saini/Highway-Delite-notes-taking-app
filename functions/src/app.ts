@@ -44,7 +44,7 @@ app.use(morgan('combined'));
 // User Routes
 app.use('/api/v1/user', userRouter);
 // Note Routes
-app.use('/api/v1', noteRoutes);
+app.use('/api/v1/user', noteRoutes);
 
 // Root Route
 app.use('/', indexRoute);
