@@ -1,0 +1,34 @@
+version: "3.9"
+
+services:
+  backend:
+    build: ./functions
+    container_name: notes-backend
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./functions/.env
+    environment:
+      - PORT=5000
+      - MONGO_URI=${MONGO_URI}   # Your Atlas connection string from .env
+      - FRONTEND_URL=http://localhost:3000
+    networks:
+      - app-network
+
+  frontend:
+    build: ./ui
+    container_name: notes-frontend
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./ui/.env
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:5000
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
