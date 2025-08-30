@@ -5,6 +5,7 @@ import useSWR from "swr"
 import { api, ApiError } from "@/lib/api"
 import { useState } from "react"
 import { Trash2, Edit2, Save, X } from "lucide-react"
+import { toast } from "react-toastify"
 
 type Note = {
   _id: string
@@ -20,7 +21,6 @@ export default function NotesList() {
 
   const [createState, setCreateState] = useState({ title: "", content: "" })
   const [saving, setSaving] = useState(false)
-  const [err, setErr] = useState<string | null>(null)
 
   // For editing
   const [editId, setEditId] = useState<string | null>(null)
@@ -29,13 +29,13 @@ export default function NotesList() {
   /** CREATE NOTE */
   async function createNote(e: React.FormEvent) {
     e.preventDefault()
-    setErr(null)
     try {
       setSaving(true)
       await api.createNote({
         title: createState.title,
         content: createState.content,
       })
+      toast.success(" Note created")
       setCreateState({ title: "", content: "" }) // reset form
       mutate()
     } catch (e) {
@@ -43,7 +43,7 @@ export default function NotesList() {
         e instanceof ApiError
           ? e.payload?.message || e.message
           : "Failed to create note"
-      setErr(message)
+      toast.error(message)
     } finally {
       setSaving(false)
     }
@@ -56,10 +56,15 @@ export default function NotesList() {
         title: editState.title,
         content: editState.content,
       })
+      toast.success("✅ Note updated")
       setEditId(null)
       mutate()
-    } catch {
-      
+    } catch (e) {
+      const message =
+        e instanceof ApiError
+          ? e.payload?.message || e.message
+          : "Failed to update note"
+      toast.error(message)
     }
   }
 
@@ -67,30 +72,40 @@ export default function NotesList() {
   async function deleteNote(id: string) {
     try {
       await api.deleteNote(id)
+      toast.success("🗑️ Note deleted")
       mutate()
-    } catch {
-
+    } catch (e) {
+      const message =
+        e instanceof ApiError
+          ? e.payload?.message || e.message
+          : "Failed to delete note"
+      toast.error(message)
     }
   }
 
   return (
     <div className="max-w-md mx-auto p-4 space-y-6">
       {/* Create Note Form */}
-      <form onSubmit={createNote} className="space-y-3 bg-white p-4 rounded-lg shadow">
-        {err && <p className="text-sm text-red-600">{err}</p>}
-
+      <form
+        onSubmit={createNote}
+        className="space-y-3 bg-white p-4 rounded-lg shadow"
+      >
         <input
           type="text"
           placeholder="Note title"
           value={createState.title}
-          onChange={(e) => setCreateState({ ...createState, title: e.target.value })}
+          onChange={(e) =>
+            setCreateState({ ...createState, title: e.target.value })
+          }
           className="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           required
         />
         <textarea
           placeholder="Note content (optional)"
           value={createState.content}
-          onChange={(e) => setCreateState({ ...createState, content: e.target.value })}
+          onChange={(e) =>
+            setCreateState({ ...createState, content: e.target.value })
+          }
           className="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           rows={3}
         />
@@ -125,12 +140,16 @@ export default function NotesList() {
                   <input
                     type="text"
                     value={editState.title}
-                    onChange={(e) => setEditState({ ...editState, title: e.target.value })}
+                    onChange={(e) =>
+                      setEditState({ ...editState, title: e.target.value })
+                    }
                     className="w-full rounded border px-2 py-1"
                   />
                   <textarea
                     value={editState.content}
-                    onChange={(e) => setEditState({ ...editState, content: e.target.value })}
+                    onChange={(e) =>
+                      setEditState({ ...editState, content: e.target.value })
+                    }
                     className="w-full rounded border px-2 py-1"
                     rows={2}
                   />
@@ -163,7 +182,10 @@ export default function NotesList() {
                       <button
                         onClick={() => {
                           setEditId(n._id)
-                          setEditState({ title: n.title, content: n.content || "" })
+                          setEditState({
+                            title: n.title,
+                            content: n.content || "",
+                          })
                         }}
                         className="text-gray-600 hover:text-blue-600"
                       >

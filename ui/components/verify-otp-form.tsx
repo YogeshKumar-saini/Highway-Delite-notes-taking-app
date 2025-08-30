@@ -27,7 +27,7 @@ export default function VerifyOtpForm() {
         phone: mode === "phone" ? phone : undefined,
         otp,
       })
-      toast.success("✅ OTP verified successfully")
+      toast.success(" OTP verified successfully")
       router.push("/notes")
     } catch (e) {
       const message =

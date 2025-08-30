@@ -37,7 +37,7 @@ export default function RegisterForm() {
       const res = await api.register(form)
       toast.success(
         res?.message ||
-          `Registered ✅ Check your ${form.verificationMethod} for OTP.`
+          `Registered  Check your ${form.verificationMethod} for OTP.`
       )
       setTimeout(() => router.push("/verify-otp"), 1000)
     } catch (e) {

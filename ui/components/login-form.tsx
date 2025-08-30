@@ -26,7 +26,7 @@ export default function LoginForm() {
       setLoading(true)
       await api.requestLoginOtp({ email })
       setOtpSent(true)
-      toast.success("OTP sent to your email 📩")
+      toast.success("OTP sent to your email ")
     } catch (e) {
       const message =
         e instanceof ApiError ? e.payload?.message || e.message : "Failed to send OTP"
@@ -45,7 +45,7 @@ export default function LoginForm() {
       } else {
         await api.loginOtp({ email, otp })
       }
-      toast.success("Login successful 🎉")
+      toast.success("Login successful ")
       router.push("/notes")
     } catch (e) {
       const message =
