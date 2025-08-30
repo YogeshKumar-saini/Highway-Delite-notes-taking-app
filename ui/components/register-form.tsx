@@ -16,6 +16,7 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider"
 import { DatePicker } from "@mui/x-date-pickers/DatePicker"
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns"
 import { format } from "date-fns"
+import { toast } from "react-toastify"
 
 export default function RegisterForm() {
   const router = useRouter()
@@ -28,19 +29,15 @@ export default function RegisterForm() {
     verificationMethod: "email" as "email" | "phone",
   })
   const [loading, setLoading] = useState(false)
-  const [msg, setMsg] = useState<string | null>(null)
-  const [err, setErr] = useState<string | null>(null)
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setErr(null)
-    setMsg(null)
     try {
       setLoading(true)
       const res = await api.register(form)
-      setMsg(
+      toast.success(
         res?.message ||
-          "Registered. Check your " + form.verificationMethod + " for OTP."
+          `Registered ✅ Check your ${form.verificationMethod} for OTP.`
       )
       setTimeout(() => router.push("/verify-otp"), 1000)
     } catch (e) {
@@ -48,19 +45,15 @@ export default function RegisterForm() {
         e instanceof ApiError
           ? e.payload?.message || e.message
           : "Failed to register"
-      setErr(message)
+      toast.error(message)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <Box
-    
-
-    >
+    <Box>
       <Box maxWidth={380} width="100%">
-        {/* Form */}
         <form onSubmit={onSubmit}>
           <Stack spacing={3}>
             <TextField
@@ -135,18 +128,6 @@ export default function RegisterForm() {
               <MenuItem value="email">Email</MenuItem>
               <MenuItem value="phone">Phone (SMS)</MenuItem>
             </TextField>
-
-            {/* Error / Success */}
-            {err && (
-              <Typography color="error" fontSize="0.9rem">
-                {err}
-              </Typography>
-            )}
-            {msg && (
-              <Typography color="green" fontSize="0.9rem">
-                {msg}
-              </Typography>
-            )}
 
             <Button
               type="submit"

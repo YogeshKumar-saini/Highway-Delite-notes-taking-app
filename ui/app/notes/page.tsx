@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "@/hooks/use-session";
+import { useSession } from "@/app/hooks/use-session";
 import NotesList from "@/components/notes/notes-list";
 import Link from "next/link";
 import Image from "next/image";

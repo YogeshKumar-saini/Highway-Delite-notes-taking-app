@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 const API_BASE = (typeof process !== "undefined" && process.env.NEXT_PUBLIC_API_URL) || "http://localhost:3000"
 
 type ApiOptions = RequestInit & {
@@ -17,8 +18,8 @@ export class ApiError extends Error {
 
 export async function apiFetch<T = any>(path: string, options: ApiOptions = {}): Promise<T> {
   const url = `${API_BASE}${path}`
-  const headers: HeadersInit = {
-    ...(options.headers || {}),
+  const headers: Record<string, string> = {
+    ...(options.headers as Record<string, string> || {}),
   }
 
   let body = options.body

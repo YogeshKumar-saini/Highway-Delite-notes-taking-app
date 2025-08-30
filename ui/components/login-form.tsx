@@ -8,9 +8,9 @@ import {
   Button,
   Stack,
   TextField,
-  Typography,
 } from "@mui/material"
 import { api, ApiError } from "@/lib/api"
+import { toast } from "react-toastify"
 
 export default function LoginForm() {
   const router = useRouter()
@@ -19,22 +19,18 @@ export default function LoginForm() {
   const [password, setPassword] = useState("")
   const [otpSent, setOtpSent] = useState(false)
   const [otp, setOtp] = useState("")
-  const [msg, setMsg] = useState<string | null>(null)
-  const [err, setErr] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   async function sendOtp() {
-    setErr(null)
-    setMsg(null)
     try {
       setLoading(true)
       await api.requestLoginOtp({ email })
       setOtpSent(true)
-      setMsg("OTP sent to your email.")
+      toast.success("OTP sent to your email 📩")
     } catch (e) {
       const message =
         e instanceof ApiError ? e.payload?.message || e.message : "Failed to send OTP"
-      setErr(message)
+      toast.error(message)
     } finally {
       setLoading(false)
     }
@@ -42,9 +38,6 @@ export default function LoginForm() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setErr(null)
-    setMsg(null)
-
     try {
       setLoading(true)
       if (mode === "password") {
@@ -52,20 +45,19 @@ export default function LoginForm() {
       } else {
         await api.loginOtp({ email, otp })
       }
+      toast.success("Login successful 🎉")
       router.push("/notes")
     } catch (e) {
       const message =
         e instanceof ApiError ? e.payload?.message || e.message : "Login failed"
-      setErr(message)
+      toast.error(message)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <Box
-      minHeight="auto"
-    >
+    <Box>
       <Box maxWidth={400} width="100%">
         {/* Mode toggle */}
         <Stack direction="row" spacing={2} mb={3}>
@@ -146,10 +138,6 @@ export default function LoginForm() {
                 )}
               </>
             )}
-
-            {/* Error / Success */}
-            {err && <Typography color="error" fontSize="0.9rem">{err}</Typography>}
-            {msg && <Typography color="green" fontSize="0.9rem">{msg}</Typography>}
 
             <Button
               type="submit"
