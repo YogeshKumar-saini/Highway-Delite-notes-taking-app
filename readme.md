@@ -742,7 +742,43 @@ gcloud run deploy notes-frontend \
   --set-env-vars NEXT_PUBLIC_API_URL=https://notes-backend-xxx.run.app
 ```
 
-  
+<!-- add images screenshot --> 
+
+
+
+
+## 🚀 Deployment Demo 
+
+1 .signup
+
+![](demo/1.png)
+
+2 .verify otp
+
+![](demo/2.png)
+3 .dashboard
+
+![](demo/3.png)
+
+4 .login
+
+![](demo/4.png)
+
+5 .verify otp
+
+![](demo/5.png)
+
+6 .forgot password
+
+![](demo/6.png)
+
+7 .Reset Password
+
+![](demo/7.png)
+
+
+
+
 
 ### Adding New Features
 
