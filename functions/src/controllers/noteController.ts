@@ -2,15 +2,16 @@
 
 import { Request, Response, NextFunction } from "express";
 import { catchAsyncError } from "../middleware/catchAsyncError";
-import { errorMiddleware } from "../middleware/error";
 import { Note } from "../models/noteModel";
 import type { INote } from "../models/noteModel";
+import ErrorHandler from "../utils/errorHandler"; // ✅ import ErrorHandler
 
+// ************************ createNote ************************
 export const createNote = catchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
   const { title, content } = req.body;
 
   if (!title) {
-    return next(errorMiddleware("Title is required.", req, res, next, 400));
+    return next(new ErrorHandler("Title is required.", 400));
   }
 
   const note: INote = await Note.create({
@@ -25,6 +26,7 @@ export const createNote = catchAsyncError(async (req: Request, res: Response, ne
   });
 });
 
+// ************************ getNotes ************************
 export const getNotes = catchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
   const notes = await Note.find({ user: req.user._id });
 
@@ -34,15 +36,16 @@ export const getNotes = catchAsyncError(async (req: Request, res: Response, next
   });
 });
 
+// ************************ getNote ************************
 export const getNote = catchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
   const note = await Note.findById(req.params.id);
 
   if (!note) {
-    return next(errorMiddleware("Note not found.", req, res, next, 404));
+    return next(new ErrorHandler("Note not found.", 404));
   }
 
   if (note.user.toString() !== req.user._id.toString()) {
-    return next(errorMiddleware("Unauthorized access.", req, res, next, 401));
+    return next(new ErrorHandler("Unauthorized access.", 401));
   }
 
   res.status(200).json({
@@ -51,15 +54,16 @@ export const getNote = catchAsyncError(async (req: Request, res: Response, next:
   });
 });
 
+// ************************ updateNote ************************
 export const updateNote = catchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
   let note = await Note.findById(req.params.id);
 
   if (!note) {
-    return next(errorMiddleware("Note not found.", req, res, next, 404));
+    return next(new ErrorHandler("Note not found.", 404));
   }
 
   if (note.user.toString() !== req.user._id.toString()) {
-    return next(errorMiddleware("Unauthorized access.", req, res, next, 401));
+    return next(new ErrorHandler("Unauthorized access.", 401));
   }
 
   note = await Note.findByIdAndUpdate(req.params.id, req.body, {
@@ -73,15 +77,16 @@ export const updateNote = catchAsyncError(async (req: Request, res: Response, ne
   });
 });
 
+// ************************ deleteNote ************************
 export const deleteNote = catchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
   const note = await Note.findById(req.params.id);
 
   if (!note) {
-    return next(errorMiddleware("Note not found.", req, res, next, 404));
+    return next(new ErrorHandler("Note not found.", 404));
   }
 
   if (note.user.toString() !== req.user._id.toString()) {
-    return next(errorMiddleware("Unauthorized access.", req, res, next, 401));
+    return next(new ErrorHandler("Unauthorized access.", 401));
   }
 
   await Note.findByIdAndDelete(note._id);

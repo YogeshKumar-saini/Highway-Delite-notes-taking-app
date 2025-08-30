@@ -49,14 +49,7 @@ app.use('/api/v1/user', noteRoutes);
 // Root Route
 app.use('/', indexRoute);
 
-// Error Handling Middleware
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error(err.stack); 
-  res.status(500).json({
-    success: false,
-    message: "Internal Server Error",
-  });
-});
+
 app.use(errorMiddleware);
 removeUnverifiedAccounts();
 // Database Connection
